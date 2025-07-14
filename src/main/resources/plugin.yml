@@ -1,0 +1,30 @@
+name: ContainerNotifier
+version: 1.0
+main: com.ContainerNotifier
+author: Kre0lidge
+description: Monitors storage containers for items exceeding configured limits
+api-version: 1.13
+
+commands:
+  containernotifier:
+    description: ContainerNotifier plugin commands
+    usage: /<command> [reload|status|help]
+    permission: containernotifier.admin
+    aliases: [cn]
+
+permissions:
+  containernotifier.admin:
+    description: Allows access to ContainerNotifier admin commands
+    default: op
+
+  containernotifier.bypass:
+    description: Base permission for bypassing storage monitoring
+    default: false
+
+  containernotifier.bypass.item.*:
+    description: Allows bypassing storage alerts for all item types
+    default: false
+
+  containernotifier.bypass.item.<id>:
+    description: Allows bypassing storage alerts for item with a particular ID
+    default: false

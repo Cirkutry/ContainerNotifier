@@ -1,0 +1,40 @@
+#    __________  _   ___________    _____   ____________ 
+#   / ____/ __ \/ | / /_  __/   |  /  _/ | / / ____/ __ \
+#  / /   / / / /  |/ / / / / /| |  / //  |/ / __/ / /_/ /
+# / /___/ /_/ / /|  / / / / ___ |_/ // /|  / /___/ _, _/ 
+# \____/\____/_/ |_/_/_/_/_/__|_/___/_/_|_/_____/_/ |_|  
+#    / | / / __ \/_  __/  _/ ____/  _/ ____/ __ \        
+#   /  |/ / / / / / /  / // /_   / // __/ / /_/ /        
+#  / /|  / /_/ / / / _/ // __/ _/ // /___/ _, _/         
+# /_/ |_/\____/ /_/ /___/_/   /___/_____/_/ |_|          
+#                                       Author: Kre0lidge
+
+# Discord webhook URL for alerts
+webhook-url: "your-webhook-url-here"
+
+# Item thresholds - when items exceed these amounts, an alert is sent
+# Format: "namespace:item_name": amount
+thresholds:
+  1:
+    item: pixelmon:poke_ball
+    threshold: 8
+    nbt:
+      1:
+        type: STRING
+        key: PokeBallID
+        value: master_ball
+  2:
+    item: minecraft:diamond
+    threshold: 64
+
+settings:
+  # Enable debug logging
+  debug: false
+  
+  # Cooldown in seconds between alerts for the same player/item combination
+  # This prevents spam if someone repeatedly opens the same container
+  alert-cooldown: 300
+  
+  # Whether to check player inventories when they open containers
+  # (in addition to the container contents)
+  check-player-inventory: false
