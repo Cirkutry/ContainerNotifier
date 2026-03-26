@@ -7,7 +7,7 @@ A lightweight Minecraft plugin that monitors storage containers for items exceed
 - `/containernotifier help` - Show plugin information
 - `/containernotifier reload` - Reload configuration
 - `/containernotifier status` - Show plugin status
-- `/containernotifier additem [threshold]` - Save held item as full SNBT (including 1.20.5+ components) using an auto-generated ID
+- `/containernotifier additem [threshold]` - Save held item into config
 
 ## Permissions
 
