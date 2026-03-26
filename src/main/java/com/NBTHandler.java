@@ -2,6 +2,8 @@ package com;
 
 import de.tr7zw.changeme.nbtapi.NBTItem;
 import de.tr7zw.changeme.nbtapi.NBTCompound;
+import de.tr7zw.changeme.nbtapi.NBT;
+import de.tr7zw.changeme.nbtapi.iface.ReadWriteNBT;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.inventory.ItemStack;
 
@@ -17,13 +19,63 @@ public class NBTHandler {
         this.logger = logger;
         this.debugMode = debugMode;
     }
+
+    public String serializeItemForConfig(ItemStack item) {
+        if (item == null) {
+            return null;
+        }
+
+        try {
+            ReadWriteNBT itemNbt = NBT.itemStackToNBT(item.clone());
+            normalizeItemCount(itemNbt);
+            return itemNbt.toString();
+        } catch (Exception e) {
+            if (debugMode) {
+                logger.warning("Error serializing item SNBT: " + e.getMessage());
+            }
+            return null;
+        }
+    }
+
+    public boolean matchesSerializedItem(ItemStack item, String storedSnbt) {
+        if (item == null || storedSnbt == null || storedSnbt.trim().isEmpty()) {
+            return false;
+        }
+
+        String actualSnbt = serializeItemForConfig(item);
+        if (actualSnbt == null) {
+            return false;
+        }
+
+        if (storedSnbt.equals(actualSnbt)) {
+            return true;
+        }
+
+        try {
+            ReadWriteNBT expected = NBT.parseNBT(storedSnbt);
+            normalizeItemCount(expected);
+            return expected.toString().equals(actualSnbt);
+        } catch (Exception e) {
+            if (debugMode) {
+                logger.warning("Error parsing stored SNBT for comparison: " + e.getMessage());
+            }
+            return false;
+        }
+    }
+
+    private void normalizeItemCount(ReadWriteNBT itemNbt) {
+        if (itemNbt == null) {
+            return;
+        }
+
+        if (itemNbt.hasTag("Count")) {
+            itemNbt.setByte("Count", (byte) 1);
+        }
+        if (itemNbt.hasTag("count")) {
+            itemNbt.setInteger("count", 1);
+        }
+    }
     
-    /**
-     * Checks if an item matches the NBT requirements specified in the configuration
-     * @param item The ItemStack to check
-     * @param nbtConfig The NBT configuration section from config.yml
-     * @return true if the item matches all NBT requirements, false otherwise
-     */
     @SuppressWarnings("deprecation")
     public boolean matchesNBT(ItemStack item, ConfigurationSection nbtConfig) {
         if (item == null || nbtConfig == null) {
@@ -50,10 +102,7 @@ public class NBTHandler {
             return false;
         }
     }
-    
-    /**
-     * Recursively checks an NBT tag against the configuration
-     */
+
     private boolean checkNBTTag(NBTCompound nbtCompound, ConfigurationSection nbtEntry, String entryKey) {
         String type = nbtEntry.getString("type");
         String key = nbtEntry.getString("key");
@@ -356,11 +405,6 @@ public class NBTHandler {
         return true;
     }
     
-    /**
-     * Gets a debug string representation of an item's NBT data
-     * @param item The ItemStack to examine
-     * @return String representation of NBT data
-     */
     @SuppressWarnings("deprecation")
     public String getNBTDebugString(ItemStack item) {
         if (item == null) {
@@ -377,7 +421,7 @@ public class NBTHandler {
             }
             
             if (sb.length() > 11) {
-                sb.setLength(sb.length() - 2); // Remove last ", "
+                sb.setLength(sb.length() - 2);
             } else {
                 sb.append("none");
             }

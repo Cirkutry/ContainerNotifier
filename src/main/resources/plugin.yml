@@ -3,12 +3,12 @@ version: 1.0
 main: com.ContainerNotifier
 author: Kre0lidge
 description: Monitors storage containers for items exceeding configured limits
-api-version: 1.13
+api-version: 1.21
 
 commands:
   containernotifier:
     description: ContainerNotifier plugin commands
-    usage: /<command> [reload|status|help]
+    usage: /<command> [reload|status|additem [threshold]|help]
     permission: containernotifier.admin
     aliases: [cn]
 

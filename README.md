@@ -1,12 +1,13 @@
 # ContainerNotifier Plugin
 
-A lightweight Minecraft plugin that monitors storage containers for items exceeding configured limits and sends Discord webhook alerts. Should support MC version 1.8.8 to 1.21.7
+A lightweight Minecraft plugin that monitors storage containers for items exceeding configured limits and sends Discord webhook alerts. Use v1 for Minecraft versions below 1.21, and v2 or newer for Minecraft 1.21 or newer.
 
 ## Commands
 
 - `/containernotifier help` - Show plugin information
 - `/containernotifier reload` - Reload configuration
 - `/containernotifier status` - Show plugin status
+- `/containernotifier additem [threshold]` - Save held item as full SNBT (including 1.20.5+ components) using an auto-generated ID
 
 ## Permissions
 

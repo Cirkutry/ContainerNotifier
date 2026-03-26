@@ -24,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 
 public class ContainerNotifier extends JavaPlugin implements Listener {
@@ -40,12 +41,14 @@ public class ContainerNotifier extends JavaPlugin implements Listener {
         private final String item;
         private final int threshold;
         private final ConfigurationSection nbtConfig;
+        private final String savedItemNbt;
         
-        public ItemThreshold(String id, String item, int threshold, ConfigurationSection nbtConfig) {
+        public ItemThreshold(String id, String item, int threshold, ConfigurationSection nbtConfig, String savedItemNbt) {
             this.id = id;
             this.item = item;
             this.threshold = threshold;
             this.nbtConfig = nbtConfig;
+            this.savedItemNbt = savedItemNbt;
         }
         
         public String getId() {
@@ -63,9 +66,17 @@ public class ContainerNotifier extends JavaPlugin implements Listener {
         public ConfigurationSection getNbtConfig() {
             return nbtConfig;
         }
+
+        public String getSavedItemNbt() {
+            return savedItemNbt;
+        }
         
         public boolean hasNbtRequirement() {
             return nbtConfig != null && !nbtConfig.getKeys(false).isEmpty();
+        }
+
+        public boolean hasSavedItemNbt() {
+            return savedItemNbt != null && !savedItemNbt.trim().isEmpty();
         }
     }
     
@@ -108,9 +119,10 @@ public class ContainerNotifier extends JavaPlugin implements Listener {
                     String item = thresholdSection.getString("item");
                     int threshold = thresholdSection.getInt("threshold");
                     ConfigurationSection nbtConfig = thresholdSection.getConfigurationSection("nbt");
+                    String savedItemNbt = thresholdSection.getString("saved_item_nbt", "");
                     
                     if (item != null && threshold > 0) {
-                        itemThresholds.put(item, new ItemThreshold(id, item, threshold, nbtConfig));
+                        itemThresholds.put(item, new ItemThreshold(id, item, threshold, nbtConfig, savedItemNbt));
                         if (debugMode) {
                             getLogger().info("Loaded threshold for item " + item + " (ID: " + id + ") - threshold: " + threshold);
                         }
@@ -138,6 +150,7 @@ public class ContainerNotifier extends JavaPlugin implements Listener {
             sender.sendMessage(ChatColor.YELLOW + "Commands:");
             sender.sendMessage(ChatColor.YELLOW + "/containernotifier reload - Reload configuration");
             sender.sendMessage(ChatColor.YELLOW + "/containernotifier status - Show plugin status");
+            sender.sendMessage(ChatColor.YELLOW + "/containernotifier additem [threshold] - Save held item as full SNBT filter");
             return true;
         }
         
@@ -156,6 +169,9 @@ public class ContainerNotifier extends JavaPlugin implements Listener {
                 sender.sendMessage(ChatColor.YELLOW + "Alert cooldown: " + ChatColor.WHITE + alertCooldown + " seconds");
                 sender.sendMessage(ChatColor.YELLOW + "Check player inventory: " + (checkPlayerInventory ? ChatColor.GREEN + "Yes" : ChatColor.RED + "No"));
                 break;
+
+            case "additem":
+                return handleAddItemCommand(sender, args);
                 
             default:
                 sender.sendMessage(ChatColor.RED + "Unknown command. Use /containernotifier or /containernotifier help for help.");
@@ -283,6 +299,14 @@ public class ContainerNotifier extends JavaPlugin implements Listener {
                     }
                     continue;
                 }
+                if (threshold.hasSavedItemNbt()) {
+                    if (!nbtHandler.matchesSerializedItem(item, threshold.getSavedItemNbt())) {
+                        if (debugMode) {
+                            getLogger().info("Item " + itemKey + " does not match saved_item_nbt requirements");
+                        }
+                        continue;
+                    }
+                }
                 if (threshold.hasNbtRequirement()) {
                     if (!nbtHandler.matchesNBT(item, threshold.getNbtConfig())) {
                         if (debugMode) {
@@ -332,6 +356,79 @@ public class ContainerNotifier extends JavaPlugin implements Listener {
         } catch (Exception e) {
         }
         return "minecraft:" + item.getType().name().toLowerCase();
+    }
+
+    private boolean handleAddItemCommand(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(ChatColor.RED + "Only players can use this command.");
+            return true;
+        }
+
+        Player player = (Player) sender;
+        ItemStack heldItem = player.getInventory().getItemInMainHand();
+        if (heldItem == null || heldItem.getType() == Material.AIR) {
+            sender.sendMessage(ChatColor.RED + "Hold an item in your main hand first.");
+            return true;
+        }
+
+        String id = generateRandomThresholdId(getConfig());
+        String basePath = "thresholds." + id;
+        FileConfiguration config = getConfig();
+        ConfigurationSection section = config.getConfigurationSection(basePath);
+        if (section == null) {
+            section = config.createSection(basePath);
+        }
+
+        int threshold;
+        if (args.length >= 2) {
+            try {
+                threshold = Integer.parseInt(args[1]);
+            } catch (NumberFormatException e) {
+                sender.sendMessage(ChatColor.RED + "Threshold must be a positive number.");
+                return true;
+            }
+            if (threshold <= 0) {
+                sender.sendMessage(ChatColor.RED + "Threshold must be greater than 0.");
+                return true;
+            }
+        } else {
+            threshold = 64;
+        }
+
+        String itemKey = getItemKey(heldItem);
+        String itemSnbt = nbtHandler.serializeItemForConfig(heldItem);
+        if (itemSnbt == null || itemSnbt.isEmpty()) {
+            sender.sendMessage(ChatColor.RED + "Failed to read held item NBT data.");
+            return true;
+        }
+
+        section.set("item", itemKey);
+        section.set("threshold", threshold);
+        section.set("saved_item_nbt", itemSnbt);
+
+        section.set("nbt", null);
+
+        saveConfig();
+        loadConfig();
+
+        sender.sendMessage(ChatColor.GREEN + "Saved held item for threshold ID '" + id + "'.");
+        sender.sendMessage(ChatColor.GREEN + "Item: " + ChatColor.WHITE + itemKey + ChatColor.GREEN + " | Threshold: " + ChatColor.WHITE + threshold);
+        if (debugMode) {
+            sender.sendMessage(ChatColor.GRAY + "saved_item_nbt: " + itemSnbt);
+        }
+
+        return true;
+    }
+
+    private String generateRandomThresholdId(FileConfiguration config) {
+        String id;
+
+        do {
+            int candidate = ThreadLocalRandom.current().nextInt(1, 1_000_000);
+            id = Integer.toString(candidate);
+        } while (config.contains("thresholds." + id));
+
+        return id;
     }
     
     private void sendAlert(Player player, ItemStack item, String location, ItemThreshold threshold, String inventoryType, int totalAmount) {

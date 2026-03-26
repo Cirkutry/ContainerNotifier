@@ -14,6 +14,7 @@ webhook-url: "your-webhook-url-here"
 
 # Item thresholds - when items exceed these amounts, an alert is sent
 # Format: "namespace:item_name": amount
+# You can also use /containernotifier additem [threshold]
 thresholds:
   1:
     item: pixelmon:poke_ball
